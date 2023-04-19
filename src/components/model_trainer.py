@@ -91,7 +91,6 @@ class ModelTrainer:
             logging.info(f"Best found model on both training and testing dataset")
 
             best_model = grid.best_estimator_
-            y_pred = best_model.predict(x_test)
 
             
 
