@@ -136,3 +136,5 @@ dmypy.json
 artifacts
 prediction_artifacts
 predictions
+
+demo.py
