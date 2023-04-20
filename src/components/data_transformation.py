@@ -23,13 +23,9 @@ class DataTransformationConfig:
 
 
 class DataTransformation:
-    def __init__(self,
-                 train_file_path,
-                 test_file_path):
+    def __init__(self):
         self.data_transformation_config = DataTransformationConfig()
 
-        self.train_file_path = train_file_path
-        self.test_file_path = test_file_path
 
     
         

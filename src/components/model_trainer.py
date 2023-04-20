@@ -2,7 +2,7 @@ import os
 import sys
 from dataclasses import dataclass
 
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline, make_pipeline
 
 from sklearn.metrics import r2_score
 from sklearn.model_selection import GridSearchCV
@@ -14,12 +14,13 @@ from xgboost import XGBClassifier
 
 from src.exception import CustomException
 from src.logger import logging
-from src.utils import  load_object, save_object, upload_file
+from src.utils import  load_object, save_object, upload_file, read_yaml_file, evaluate_models
 
 
 @dataclass
 class ModelTrainerConfig:
     trained_model_file_path = os.path.join("artifacts", "model.pkl")
+    model_config_file_path =os.path.join("config", "model.yaml")
 
 
 class CustomModel:
@@ -44,6 +45,36 @@ class ModelTrainer:
     def __init__(self):
         self.model_trainer_config = ModelTrainerConfig()
 
+    
+    def finetune_best_model(self,
+                            best_model_object:object,
+                            best_model_name,
+                            X_train,
+                            y_train,
+                            ) -> object:
+        
+        try:
+
+            model_param_grid = read_yaml_file(self.model_trainer_config.model_config_file_path)["model_selection"]["model"][best_model_name]["search_param_grid"]
+
+
+            grid_search = GridSearchCV(
+                best_model_object, param_grid=model_param_grid, cv=5, n_jobs=-1, verbose=1 )
+            
+            grid_search.fit(X_train, y_train)
+
+            best_params = grid_search.best_params_
+
+            print("best params are:", best_params)
+
+            finetuned_model = best_model_object.set_params(**best_params)
+            
+
+            return finetuned_model
+        
+        except Exception as e:
+            raise CustomException(e,sys)
+
     def initiate_model_trainer(self, train_array, test_array, preprocessor_path):
         try:
             logging.info(f"Splitting training and testing input and target feature")
@@ -55,45 +86,55 @@ class ModelTrainer:
                 test_array[:, -1],
             )
 
-            models = [
-                        ('Linear Regression', LinearRegression()),
-                        ('Ridge Regression', Ridge()),
-                        ('Lasso Regression', Lasso()),
-                        ('Random Forest Regression', RandomForestRegressor()),
-                        ('Gradient Boosting Regression', GradientBoostingRegressor())
-                    ]
+            models = {
+                        'Linear Regression': LinearRegression(),
+                        'Ridge Regression': Ridge(),
+                        'Lasso Regression': Lasso(),
+                        'Random Forest Regression': RandomForestRegressor(),
+                        'Gradient Boosting Regression':GradientBoostingRegressor()
+                        }
 
             logging.info(f"Extracting model config file path")
 
-            preprocessor = load_object(file_path=preprocessor_path)
-
-            pipelines = []
-            for name, model in models:
-                pipelines.append((name, Pipeline([('preprocessor', preprocessor), (name, model)])))
-
-           
-           # Define the parameter grid for GridSearchCV
-            param_grid = {
-                'Linear Regression': {},
-                'Ridge Regression': {'alpha': [0.01, 0.1, 1, 10]},
-                'Lasso Regression': {'alpha': [0.01, 0.1, 1, 10]},
-                'Random Forest Regression': {'n_estimators': [50, 100, 200], 'max_depth': [None, 5, 10]},
-                'Gradient Boosting Regression': {'n_estimators': [50, 100, 200], 'max_depth': [None, 5, 10], 'learning_rate': [0.01, 0.1, 1]},
-                'Neural Network Regression': {'hidden_layer_sizes': [(50, 50), (100, 50, 25)], 'alpha': [0.0001, 0.001, 0.01]}
-            }
-
-            # Define the GridSearchCV object
-            grid = GridSearchCV(estimator=pipelines, param_grid=param_grid, scoring='neg_mean_squared_error', cv=5, n_jobs=-1)
-
-            # Fit the grid search object to the training data
-            grid.fit(x_train, y_train)
-
-            logging.info(f"Best found model on both training and testing dataset")
-
-            best_model = grid.best_estimator_
 
             
+            preprocessor = load_object(file_path=preprocessor_path)
 
+
+
+            logging.info(f"Extracting model config file path")
+
+            model_report: dict = evaluate_models(X=x_train, y=y_train, models=models)
+
+            ## To get best model score from dict
+            best_model_score = max(sorted(model_report.values()))
+
+            ## To get best model name from dict
+
+            best_model_name = list(model_report.keys())[
+                list(model_report.values()).index(best_model_score)
+            ]
+
+            best_model = models[best_model_name]
+
+
+            best_model = self.finetune_best_model(
+                best_model_name= best_model_name,
+                best_model_object= best_model,
+                X_train= x_train,
+                y_train= y_train
+            )
+
+            best_model.fit(x_train, y_train)
+            y_pred = best_model.predict(x_test)
+            best_model_score = r2_score(y_test, y_pred)
+
+            if best_model_score < 0.6:
+                raise Exception("No best model found with an accuracy greater than the threshold 0.6")
+            
+            logging.info(f"Best found model on both training and testing dataset")
+
+ 
             custom_model = CustomModel(
                 preprocessing_object=preprocessor,
                 trained_model_object=best_model,
@@ -108,17 +149,15 @@ class ModelTrainer:
                 obj=custom_model,
             )
 
-            predicted = best_model.predict(x_test)
-
-            r2_square = r2_score(y_test, predicted)
+          
 
             upload_file(
                 from_filename=self.model_trainer_config.trained_model_file_path,
                 to_filename="model.pkl",
-                bucket_name="ineuron-test-bucket-123",
+                bucket_name="cement-strength",
             )
 
-            return r2_square
+            return best_model_score
 
         except Exception as e:
             raise CustomException(e, sys)

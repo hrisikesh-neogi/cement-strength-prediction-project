@@ -12,6 +12,17 @@ app = Flask(__name__)
 def home():
     return jsonify("home")
 
+@app.route("/train")
+def train_route():
+    try:
+        train_pipeline = TrainPipeline()
+        train_pipeline.run_pipeline()
+
+        return jsonify("Training Successfull.")
+
+    except Exception as e:
+        raise CustomException(e,sys)
+
 @app.route('/upload', methods=['POST', 'GET'])
 def upload():
     

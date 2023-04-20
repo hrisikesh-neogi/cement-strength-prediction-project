@@ -23,7 +23,7 @@ class TrainPipeline:
                 test_arr,
                 preprocessor_file_path,
             ) = self.data_transformation.initiate_data_transformation(
-                train_path=train_path, test_path=test_path
+                train_file_path=train_path, test_file_path=test_path
             )
 
             r2_square = self.model_trainer.initiate_model_trainer(

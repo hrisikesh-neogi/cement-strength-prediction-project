@@ -16,7 +16,7 @@ from src.exception import CustomException
 
 
 
-def read_yaml_file(self, filename: str) -> dict:
+def read_yaml_file(filename: str) -> dict:
     try:
         with open(filename, "rb") as yaml_file:
             return yaml.safe_load(yaml_file)
@@ -24,10 +24,10 @@ def read_yaml_file(self, filename: str) -> dict:
     except Exception as e:
         raise CustomException(e, sys) from e
 
-def read_schema_config_file(self) -> dict:
+def read_schema_config_file() -> dict:
     try:
         SCHEMA_FILE_PATH = os.path.join("config", "schema.yaml")
-        schema_config = self.read_yaml_file(SCHEMA_FILE_PATH)
+        schema_config = read_yaml_file(SCHEMA_FILE_PATH)
 
         return schema_config
 

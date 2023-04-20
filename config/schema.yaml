@@ -26,4 +26,5 @@ target_column: 'Concrete compressive strength(MPa, megapascals) '
 outlier_columns:
   - 'Water  (component 4)(kg in a m^3 mixture)'
   - 'Coarse Aggregate  (component 6)(kg in a m^3 mixture)'
-  - 'Fine Aggregate (component 7)(kg in a m^3 mixture)', 'Age (day)'
+  - 'Fine Aggregate (component 7)(kg in a m^3 mixture)'
+  - 'Age (day)'
