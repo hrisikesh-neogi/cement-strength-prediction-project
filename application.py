@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return jsonify("home")
+    return render_template("index.html")
 
 @app.route("/train")
 def train_route():
@@ -20,6 +20,17 @@ def train_route():
 
         return jsonify("Training Successfull.")
 
+    except Exception as e:
+        raise CustomException(e,sys)
+    
+
+@app.route("/predict", methods = ['POST', 'GET'])
+def predict():
+    try:
+        if request.method == "POST":
+            data = dict(request.form.items())
+            print(data)
+            return jsonify("done")
     except Exception as e:
         raise CustomException(e,sys)
 

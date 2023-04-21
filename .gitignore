@@ -138,3 +138,8 @@ prediction_artifacts
 predictions
 
 demo.py
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
